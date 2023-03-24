@@ -112,7 +112,7 @@ size_t counter_get_count(const Counter *cntr, const char *key)
     return (*cntr->item[i].key ? cntr->item[i].count : 0);
 }
 
-double counter_get_probability(const Counter *cntr, const char *key)
+double counter_get_ratio(const Counter *cntr, const char *key)
 {
     return counter_get_count(cntr, key) / (double)cntr->sum;
 }
@@ -125,9 +125,9 @@ int main(int argc, char **argv)
     printf("%zu\n", cntr->sum);
     counter_most_common(cntr, 20);
     printf("%zu\n", counter_get_count(cntr, "the"));
-    printf("%g\n", counter_get_probability(cntr, "the"));
-    printf("%g\n", counter_get_probability(cntr, "outrivaled"));
-    printf("%g\n", counter_get_probability(cntr, "unmentioned"));
+    printf("%g\n", counter_get_ratio(cntr, "the"));
+    printf("%g\n", counter_get_ratio(cntr, "outrivaled"));
+    printf("%g\n", counter_get_ratio(cntr, "unmentioned"));
 
     free(cntr);
 }
