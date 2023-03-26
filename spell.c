@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_WORD_LEN 30
+#define WORD_FMT "%29s"
+
 size_t strhash(const char *str)
 {
     // djb2 hash function (http://www.cse.yorku.ca/~oz/hash.html)
@@ -18,11 +21,9 @@ size_t strhash(const char *str)
 }
 
 // fixed size word counter (hash table)
-#define MAX_WORD_LEN 30
 #define COUNTER_SIZE 60000
 typedef struct Counter {
     size_t len; // number of items
-    size_t sum; // sum of item counts
     struct {
         const char word[MAX_WORD_LEN];
         size_t count;
@@ -32,7 +33,7 @@ typedef struct Counter {
 void counter_insert(Counter *counter, const char *word)
 {
     assert(counter->len < COUNTER_SIZE / 2);
-    // find empty spot or same word with linear probing; insert word; increase count & sum
+    // find empty spot or same word with linear probing; insert word; increase count
     size_t i = strhash(word) % COUNTER_SIZE;
     while (*counter->item[i].word && strcmp(counter->item[i].word, word)) {
         i = (i + 1) % COUNTER_SIZE;
@@ -44,7 +45,6 @@ void counter_insert(Counter *counter, const char *word)
     } else { // same word
         ++counter->item[i].count;
     }
-    ++counter->sum;
 }
 
 Counter *counter_alloc(const char *fname)
@@ -53,7 +53,6 @@ Counter *counter_alloc(const char *fname)
     Counter *counter = malloc(sizeof(*counter));
     assert(counter && "Could not allocate memory.");
     counter->len = 0;
-    counter->sum = 0;
     FILE *file = fopen(fname, "r");
     assert(file && "Could not open file.");
     char word[MAX_WORD_LEN] = "";
@@ -83,6 +82,11 @@ size_t counter_get_count(const Counter *counter, const char *word)
     return (*counter->item[i].word ? counter->item[i].count : 0);
 }
 
+double word_probability(const Counter *count, const char *word)
+{
+    return counter_get_count(count, word) / (double)count->len;
+}
+
 // dynamically sized set of fixed size words (hash table)
 typedef struct Set {
     size_t len; // number of words
@@ -97,6 +101,7 @@ Set *set_alloc(size_t size)
     set->len = 0;
     set->size = size;
     set->word = calloc(size, sizeof(*set->word));
+    assert(set->word && "Could not allocate memory.");
     return set;
 }
 
@@ -122,7 +127,7 @@ void set_insert(Set *set, const char *word)
 
 Set *word_edit_once(const char *word)
 {
-    assert(word);
+    assert(word && strlen(word));
     // create all edits that are one edit away from 'word'; filter by known words
     const size_t n = strlen(word);
     Set *edit = set_alloc(2 * (54 * n + 25));
@@ -231,27 +236,82 @@ Vector *word_known(const Counter *counter, const Set *edit)
     return known;
 }
 
+int cmp_double_dsc(const void *a_, const void *b_)
+{
+    const double a = *(double *)a_;
+    const double b = *(double *)b_;
+    return (a < b) - (a > b);
+}
+
+char *word_max_probability(const Vector *vec, const Counter *counter)
+{
+    struct {
+        double probability;
+        char *word;
+    } *pair = calloc(vec->len, sizeof(*pair));
+    assert(pair && "Could not allocate memory.");
+    for (size_t i = 0; i < vec->len; ++i) {
+        pair[i].probability = word_probability(counter, vec->word[i]);
+        pair[i].word = vec->word[i];
+    }
+    qsort(pair, vec->len, sizeof(*pair), cmp_double_dsc);
+    char *max = pair[0].word;
+    free(pair);
+    return max;
+}
+
+void word_correction(const Counter *counter, char *correction, const char *word)
+{
+    // if known, no correction needed
+    if (counter_get_count(counter, word)) {
+        strncpy(correction, word, MAX_WORD_LEN);
+        return;
+    }
+
+    // if edit once exists, return most probable
+    Set *edit1 = word_edit_once(word);
+    Vector *known1 = word_known(counter, edit1);
+    if (known1->len) {
+        strncpy(correction, word_max_probability(known1, counter), MAX_WORD_LEN);
+        goto cleanup_known1;
+    }
+
+    // if edit twice exists, return most probable
+    Set *edit2 = word_edit_twice(word);
+    Vector *known2 = word_known(counter, edit2);
+    if (known2->len) {
+        strncpy(correction, word_max_probability(known2, counter), MAX_WORD_LEN);
+        goto cleanup_known2;
+    }
+
+    // return unknown word
+    strncpy(correction, word, MAX_WORD_LEN);
+
+cleanup_known2:
+    set_free(edit2);
+    vector_free(known2);
+
+cleanup_known1:
+    set_free(edit1);
+    vector_free(known1);
+}
+
 int main(int argc, char **argv)
 {
+    // create word counter
     Counter *counter = counter_alloc("big.txt");
 
-    Set *edit1 = word_edit_once("somthing");
-    printf("%zu\n", edit1->len);
-    Vector *known1 = word_known(counter, edit1);
-    for (size_t i = 0; i < known1->len; ++i) {
-        printf("'%s'%s", known1->word[i], (i < known1->len - 1 ? ", " : "\n"));
-    }
-    vector_free(known1);
-    set_free(edit1);
+    if (argc == 2) {
+        // get input word
+        char word[MAX_WORD_LEN] = "";
+        sscanf(argv[1], WORD_FMT, word);
 
-    Set *edit2 = word_edit_twice("somthing");
-    printf("%zu\n", edit2->len);
-    Vector *known2 = word_known(counter, edit2);
-    for (size_t i = 0; i < known2->len; ++i) {
-        printf("'%s'%s", known2->word[i], (i < known2->len - 1 ? ", " : "\n"));
+        // get correction
+        char correction[MAX_WORD_LEN] = "";
+        word_correction(counter, correction, word);
+        printf("%s\n", correction);
     }
-    vector_free(known2);
-    set_free(edit2);
 
+    // cleanup
     free(counter);
 }
