@@ -126,9 +126,6 @@ def Testset(lines):
 
 
 if __name__ == "__main__":
-    print(words(open('big.txt').read()))
-    exit()
-
     print(unit_tests())
     spelltest(Testset(open("spell-testset1.txt")))
     spelltest(Testset(open("spell-testset2.txt")))
