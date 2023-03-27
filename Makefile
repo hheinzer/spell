@@ -1,11 +1,11 @@
 CC = gcc
 
-CFLAGS  = -std=c11 -g3 -Wall -Wextra -Wpedantic
+CFLAGS  = -std=c99 -g3 -Wall -Wextra -Wpedantic
 CFLAGS += -Wshadow -Wfloat-equal -Wundef -Wunreachable-code -Wswitch-default \
 		  -Wswitch-enum -Wpointer-arith -Wwrite-strings -Wstrict-prototypes
 
 # debug flags
-#CFLAGS += -Og -fno-omit-frame-pointer
+#CFLAGS += -Og
 #CFLAGS += -fanalyzer
 #CFLAGS += -fsanitize=undefined -fsanitize=address
 
@@ -13,11 +13,8 @@ CFLAGS += -Wshadow -Wfloat-equal -Wundef -Wunreachable-code -Wswitch-default \
 #CFLAGS += -pg
 
 # release flags
-#CFLAGS += -DNDEBUG
-CFLAGS += -march=native -mtune=native
-CFLAGS += -O3 -ffast-math -funroll-loops
-CFLAGS += -fdata-sections -ffunction-sections
-CFLAGS += -flto=auto
+CFLAGS += -DNDEBUG
+CFLAGS += -march=native -O2
 
 spell: spell.c
 
