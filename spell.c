@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define MAX_WORD_LEN 30
 #define WORD_FMT "%29s"
@@ -245,6 +246,7 @@ int cmp_double_dsc(const void *a_, const void *b_)
 
 char *word_max_probability(const Vector *vec, const Counter *counter)
 {
+    // pair words with their probability; sort; return word with highest probability
     struct {
         double probability;
         char *word;
@@ -296,12 +298,71 @@ cleanup_known1:
     vector_free(known1);
 }
 
+void spelltest(const Counter *counter, const char *fname)
+{
+    // allocate test structure
+    const size_t n_max = 500;
+    size_t n = 0;
+    struct {
+        char correct[MAX_WORD_LEN];
+        Vector *incorrect;
+    } *test = calloc(n_max, sizeof(*test));
+
+    // parse testset
+    FILE *file = fopen(fname, "r");
+    assert(file && "Could not open file.");
+    char line[256] = "";
+    while (fgets(line, sizeof(line), file)) {
+        assert(n < n_max);
+        char *tok = strtok(line, " :\n");
+        sscanf(tok, WORD_FMT, test[n].correct);
+        test[n].incorrect = vector_alloc(10);
+        while ((tok = strtok(0, " :\n"))) {
+            vector_insert(test[n].incorrect, tok);
+        }
+        ++n;
+    }
+    fclose(file);
+
+    // perform test
+    size_t n_test = 0;
+    size_t n_good = 0;
+    size_t n_unknown = 0;
+    char correction[MAX_WORD_LEN] = "";
+    const double t0 = clock();
+    for (size_t i = 0; i < n; ++i) {
+        for (size_t j = 0; j < test[i].incorrect->len; ++j) {
+            word_correction(counter, correction, test[i].incorrect->word[j]);
+            ++n_test;
+            if (!strncmp(test[i].correct, correction, MAX_WORD_LEN)) {
+                ++n_good;
+            } else {
+                if (!counter_get_count(counter, test[i].correct)) {
+                    ++n_unknown;
+                }
+            }
+        }
+    }
+    const double dt = clock() - t0;
+
+    // print result
+    printf("%.0f%% of %zu correct (%.0f%% unknown) at %.0f words per second\n",
+        100 * n_good / (double)n_test, n_test,
+        100 * n_unknown / (double)n_test, n_test / dt * CLOCKS_PER_SEC);
+
+    // cleanup
+    for (size_t i = 0; i < n; ++i) {
+        vector_free(test[i].incorrect);
+    }
+    free(test);
+}
+
 int main(int argc, char **argv)
 {
     // create word counter
     Counter *counter = counter_alloc("big.txt");
 
-    if (argc == 2) {
+    if (argc == 2) { // command line mode
         // get input word
         char word[MAX_WORD_LEN] = "";
         sscanf(argv[1], WORD_FMT, word);
@@ -310,6 +371,10 @@ int main(int argc, char **argv)
         char correction[MAX_WORD_LEN] = "";
         word_correction(counter, correction, word);
         printf("%s\n", correction);
+
+    } else { // spell test mode
+        spelltest(counter, "spell-testset1.txt");
+        spelltest(counter, "spell-testset2.txt");
     }
 
     // cleanup
