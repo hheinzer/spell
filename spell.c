@@ -33,7 +33,7 @@ typedef struct Counter {
 
 void counter_insert(Counter *counter, const char *word)
 {
-    assert(counter->len < COUNTER_SIZE / 2);
+    assert(counter->len < COUNTER_SIZE);
     // find empty spot or same word with linear probing; insert word; increase count
     size_t i = strhash(word) % COUNTER_SIZE;
     while (*counter->item[i].word && strcmp(counter->item[i].word, word)) {
@@ -95,13 +95,13 @@ typedef struct Set {
     const char (*word)[MAX_WORD_LEN];
 } Set;
 
-Set *set_alloc(size_t size)
+Set *set_alloc(size_t min_size)
 {
     Set *set = malloc(sizeof(*set));
     assert(set && "Could not allocate memory.");
     set->len = 0;
-    set->size = size;
-    set->word = calloc(size, sizeof(*set->word));
+    set->size = 2 * min_size;
+    set->word = calloc(set->size, sizeof(*set->word));
     assert(set->word && "Could not allocate memory.");
     return set;
 }
@@ -114,7 +114,7 @@ void set_free(Set *set)
 
 void set_insert(Set *set, const char *word)
 {
-    assert(set->len < set->size / 2);
+    assert(set->len < set->size);
     // find empty spot or same word with linear probing; insert word
     size_t i = strhash(word) % set->size;
     while (*set->word[i] && strcmp(set->word[i], word)) {
@@ -131,7 +131,7 @@ Set *word_edit_once(const char *word)
     assert(word && strlen(word));
     // create all edits that are one edit away from 'word'; filter by known words
     const size_t n = strlen(word);
-    Set *edit = set_alloc(2 * (54 * n + 25));
+    Set *edit = set_alloc(54 * n + 25);
     char new_word[MAX_WORD_LEN] = "";
     for (size_t i = 0; i < n + 1; ++i) {
         // splits
@@ -176,7 +176,7 @@ Set *word_edit_once(const char *word)
 Set *word_edit_twice(const char *word)
 {
     const size_t n = strlen(word);
-    Set *edit = set_alloc(2 * (54 * n + 25) * (54 * n + 25));
+    Set *edit = set_alloc((54 * n + 25) * (54 * n + 25));
     Set *edit1 = word_edit_once(word);
     for (size_t i = 0; i < edit1->size; ++i) {
         if (!*edit1->word[i]) continue;
