@@ -15,26 +15,28 @@ CFLAGS += -O2 -march=native -flto=auto -DNDEBUG
 
 SRC = $(shell find src -type f -name '*c')
 OBJ = $(SRC:%.c=%.o)
-RUN = spell.c
-BIN = $(RUN:%.c=%)
+BIN = spell
+
+default: $(BIN)
 
 CFLAGS += -MMD -MP
 DEP = $(OBJ:.o=.d) $(BIN:=.d)
 -include $(DEP)
 
-$(BIN): %: %.c $(OBJ) Makefile
-	-$(CC) $(CFLAGS) -Isrc $< $(OBJ) -o $@
-
 $(OBJ): %.o: %.c Makefile
 	$(CC) $(CFLAGS) -Isrc -c $< -o $@
+
+$(BIN): %: %.c $(OBJ) Makefile
+	-$(CC) $(CFLAGS) -Isrc $< $(OBJ) -o $@
 
 clean:
 	-rm -rf $(BIN) $(OBJ) $(DEP) perf.data*
 
 check:
-	cppcheck --enable=all --inconclusive --suppress=missingIncludeSystem *.c
+	cppcheck --enable=all --inconclusive --suppress=missingIncludeSystem \
+		--project=compile_commands.json
 
 perf: $(BIN)
 	perf record ./$(BIN) && perf report --percent-limit 2
 
-.PHONY: clean check perf
+.PHONY: default clean check perf
