@@ -237,7 +237,7 @@ int main(int argc, char **argv)
         }
     } else { // perform spell test
         spelltest(wc, "spell-testset1.txt");
-        // spelltest(wc, "spell-testset2.txt");
+        spelltest(wc, "spell-testset2.txt");
     }
     wordcounter_free(wc);
 }
