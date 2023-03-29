@@ -1,33 +1,40 @@
 CC = gcc
 
 CFLAGS  = -std=c99 -g3 -Wall -Wextra -Wpedantic
-CFLAGS += -Wshadow -Wfloat-equal -Wundef -Wunreachable-code -Wswitch-default \
-		  -Wswitch-enum -Wpointer-arith -Wwrite-strings -Wstrict-prototypes
+CFLAGS += -Wshadow -Wfloat-equal -Wundef -Wunreachable-code -Wswitch-default
+CFLAGS += -Wswitch-enum -Wpointer-arith -Wwrite-strings -Wstrict-prototypes
 
 # debug flags
-#CFLAGS += -Og
-#CFLAGS += -fanalyzer
-#CFLAGS += -fsanitize=undefined -fsanitize=address
+#CFLAGS += -Og -fsanitize=undefined,address #-fanalyzer
 
 # profiling flags
-#CFLAGS += -pg
+#CFLAGS += -Og -pg
 
 # release flags
-CFLAGS += -DNDEBUG
-CFLAGS += -march=native -O2
+CFLAGS += -O2 -march=native -flto=auto -DNDEBUG
 
-spell: spell.c
+SRC = $(shell find src -type f -name '*c')
+OBJ = $(SRC:%.c=%.o)
+RUN = spell.c
+BIN = $(RUN:%.c=%)
 
-default: spell
+CFLAGS += -MMD -MP
+DEP = $(OBJ:.o=.d) $(BIN:=.d)
+-include $(DEP)
+
+$(BIN): %: %.c $(OBJ) Makefile
+	-$(CC) $(CFLAGS) -Isrc $< $(OBJ) -o $@
+
+$(OBJ): %.o: %.c Makefile
+	$(CC) $(CFLAGS) -Isrc -c $< -o $@
 
 clean:
-	-rm -rf spell perf.data*
+	-rm -rf $(BIN) $(OBJ) $(DEP) perf.data*
 
 check:
-	cppcheck --enable=all --inconclusive --suppress=missingIncludeSystem spell.c
+	cppcheck --enable=all --inconclusive --suppress=missingIncludeSystem *.c
 
-perf: spell
-	perf record ./spell
-	perf report --percent-limit 2
+perf: $(BIN)
+	perf record ./$(BIN) && perf report --percent-limit 2
 
-.PHONY: default clean check perf
+.PHONY: clean check perf
