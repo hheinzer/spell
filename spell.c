@@ -104,7 +104,7 @@ const char *max_probability(const WordCounter *wc, const WordVector *wv)
 WordSet *edit_twice(const char *word)
 {
     const size_t n = strlen(word);
-    WordSet *ws = wordset_alloc((54 * n + 25) * (54 * n + 25));
+    WordSet *ws = wordset_alloc(2 * (54 * n + 25) * (54 * n + 25));
     WordSet *ws1 = edit_once(word);
     for (size_t i = 0; i < ws1->size; ++i) {
         if (!ws1->word[i]) continue;
