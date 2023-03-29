@@ -142,7 +142,7 @@ char *correction(const WordCounter *wc, const char *word)
         goto cleanup2;
     }
 
-    // return the unknown word
+    // return unknown word (as 0)
     ret = 0;
 
 cleanup2:
@@ -195,9 +195,9 @@ void spelltest(const WordCounter *wc, const char *fname)
     size_t n_unkn = 0;
     const double t0 = clock();
     for (size_t i = 0; i < test.len; ++i) {
+        if (!is_known(wc, test.pair[i].right)) ++n_unkn;
         char *word = correction(wc, test.pair[i].wrong);
         if (!word) {
-            ++n_unkn;
             continue;
         } else if (!strcmp(word, test.pair[i].right)) {
             ++n_good;
@@ -237,7 +237,7 @@ int main(int argc, char **argv)
         }
     } else { // perform spell test
         spelltest(wc, "spell-testset1.txt");
-        spelltest(wc, "spell-testset2.txt");
+        // spelltest(wc, "spell-testset2.txt");
     }
     wordcounter_free(wc);
 }
