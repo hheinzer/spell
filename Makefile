@@ -5,7 +5,8 @@ CFLAGS += -Wshadow -Wfloat-equal -Wundef -Wunreachable-code -Wswitch-default
 CFLAGS += -Wswitch-enum -Wpointer-arith -Wwrite-strings -Wstrict-prototypes
 
 # debug flags
-#CFLAGS += -Og -fsanitize=undefined,address #-fanalyzer
+#CFLAGS += -Og -fsanitize=undefined,address
+#CFLAGS += -fanalyzer -Wno-analyzer-malloc-leak
 
 # profiling flags
 #CFLAGS += -Og -pg
