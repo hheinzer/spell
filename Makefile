@@ -10,7 +10,7 @@ CFLAGS += -Wswitch-enum -Wpointer-arith -Wwrite-strings -Wstrict-prototypes
 #CFLAGS += -fanalyzer -Wno-analyzer-malloc-leak
 
 # profiling flags
-#CFLAGS += -Og -pg
+#CFLAGS += -Og -pg -fno-lto
 
 # release flags
 CFLAGS += -O2 -march=native -flto=auto -DNDEBUG
@@ -32,7 +32,7 @@ $(BIN): %: %.c $(OBJ) Makefile
 	-$(CC) $(CFLAGS) -Isrc $< $(OBJ) -o $@
 
 clean:
-	-rm -rf $(BIN) $(OBJ) $(DEP) perf.data*
+	-rm -rf $(BIN) $(OBJ) $(DEP) gmon.out perf.data*
 
 check:
 	cppcheck --enable=all --inconclusive --suppress=missingIncludeSystem \
